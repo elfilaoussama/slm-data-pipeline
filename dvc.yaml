@@ -1,0 +1,15 @@
+stages:
+  tasks:
+    cmd: python pipeline.py
+    deps:
+      - pipeline.py
+      - scripts/repo_discovery.py
+      - scripts/ingest_repo.py
+      - scripts/security_scan.py
+      - scripts/parse_extract.py
+      - scripts/normalize_dedup.py
+      - scripts/task_transformers.py
+      - configs.yml
+    outs:
+      - data/final/completion.jsonl
+      - data/final/documentation.jsonl

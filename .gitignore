@@ -1,0 +1,12 @@
+.venv/
+.env
+.cache/
+.index/
+.reports/
+.quarantine/
+__pycache__/
+*.pyc
+.data/
+*.tar.gz
+manifests/
+data/

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CompletionRecord",
+  "type": "object",
+  "required": ["id", "task", "language", "license", "provenance", "input", "output", "synthetic"],
+  "properties": {
+    "id": {"type": "string"},
+    "task": {"type": "string", "const": "completion"},
+    "language": {"type": "string"},
+    "license": {"type": ["string", "null"]},
+    "provenance": {"$ref": "provenance.schema.json"},
+    "input": {"type": "object", "properties": {"prefix": {"type": "string"}}, "required": ["prefix"]},
+    "output": {"type": "object", "properties": {"completion": {"type": "string"}}, "required": ["completion"]},
+    "metrics": {"type": "object"},
+    "synthetic": {"type": "boolean"}
+  }
+}

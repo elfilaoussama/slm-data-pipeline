@@ -1,0 +1,34 @@
+14:05:13.384 | INFO    | prefect.engine - Created flow run 'merciful-corgi' for flow 'slm-pipeline'
+14:05:13.467 | INFO    | Flow run 'merciful-corgi' - Starting repo discovery…
+14:05:13.540 | INFO    | Flow run 'merciful-corgi' - Created task run 't_discover_repos-0' for task 't_discover_repos'
+14:05:13.825 | INFO    | Flow run 'merciful-corgi' - Submitted task run 't_discover_repos-0' for execution.
+14:06:57.215 | INFO    | Task run 't_discover_repos-0' - Finished in state Completed()
+14:06:57.227 | INFO    | Flow run 'merciful-corgi' - Discovered 1 repos; ingesting…
+14:06:57.265 | INFO    | Flow run 'merciful-corgi' - Created task run 't_ingest_repo-0' for task 't_ingest_repo'
+14:06:57.268 | INFO    | Flow run 'merciful-corgi' - Submitted task run 't_ingest_repo-0' for execution.
+14:07:13.926 | INFO    | Task run 't_ingest_repo-0' - Finished in state Completed()
+14:07:14.016 | INFO    | Flow run 'merciful-corgi' - Created task run 't_security_gate-0' for task 't_security_gate'
+14:07:14.023 | INFO    | Flow run 'merciful-corgi' - Submitted task run 't_security_gate-0' for execution.
+14:07:39.413 | INFO    | Task run 't_security_gate-0' - Finished in state Completed()
+14:07:39.417 | INFO    | Flow run 'merciful-corgi' - 1 repos passed security/license gate; parsing…
+14:07:39.457 | INFO    | Flow run 'merciful-corgi' - Created task run 't_parse_extract-0' for task 't_parse_extract'
+14:07:39.460 | INFO    | Flow run 'merciful-corgi' - Submitted task run 't_parse_extract-0' for execution.
+14:07:40.105 | INFO    | Task run 't_parse_extract-0' - Finished in state Completed()
+14:07:40.148 | INFO    | Flow run 'merciful-corgi' - Created task run 't_normalize_dedup-0' for task 't_normalize_dedup'
+14:07:40.151 | INFO    | Flow run 'merciful-corgi' - Submitted task run 't_normalize_dedup-0' for execution.
+14:09:12.779 | INFO    | Task run 't_normalize_dedup-0' - Finished in state Completed()
+14:09:12.827 | INFO    | Flow run 'merciful-corgi' - Created task run 't_task_transformers-0' for task 't_task_transformers'
+14:09:12.829 | INFO    | Flow run 'merciful-corgi' - Submitted task run 't_task_transformers-0' for execution.
+14:09:32.620 | INFO    | Task run 't_task_transformers-0' - Finished in state Completed()
+14:09:32.667 | INFO    | Flow run 'merciful-corgi' - Created task run 't_validate_and_version-0' for task 't_validate_and_version'
+14:09:32.670 | INFO    | Flow run 'merciful-corgi' - Submitted task run 't_validate_and_version-0' for execution.
+14:10:40.947 | INFO    | Task run 't_validate_and_version-0' - Finished in state Completed()
+14:10:40.950 | INFO    | Flow run 'merciful-corgi' - Pipeline complete.
+14:10:40.953 | INFO    | Flow run 'merciful-corgi' - {
+  "final": {
+    "completion": "data/final/completion.jsonl",
+    "documentation": "data/final/documentation.jsonl"
+  },
+  "manifest": "data/final/manifest.json"
+}
+14:10:41.004 | INFO    | Flow run 'merciful-corgi' - Finished in state Completed('All states completed.')

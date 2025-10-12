@@ -1,0 +1,58 @@
+# Global configuration for the SLM pipeline
+allowed_licenses:
+  - MIT
+  - Apache-2.0
+  - BSD-3-Clause
+  - BSD-2-Clause
+languages:
+  - python
+min_stars: 100
+max_repos: 50
+semantic:
+  model: all-MiniLM-L6-v2
+  topk: 200
+  threshold: 0.70
+  calibration_topk: 200
+  calibration_queries: 100
+  cache_dir: .cache/embeddings
+keywords:
+  query: "graph algorithm python"
+  fallback: true
+repo_filters:
+  exclude_forks: true
+  min_size_kb: 10
+  max_size_mb: 200
+  topics_any: []
+  archived: false
+paths:
+  raw_dir: data/raw
+  ast_dir: data/processed/ast
+  final_dir: data/final
+  manifests_dir: manifests
+  sqlite_index: .index/meta.db
+  security_reports: .reports/security
+  quarantine_dir: .quarantine
+formatting:
+  python_black: true
+  js_prettier: false
+  line_length: 88
+dedup:
+  shingle_size: 7
+  minhash_permutations: 128
+  lsh_threshold: 0.85
+extract:
+  min_function_loc: 5
+  max_function_loc: 400
+  include_tests: false
+debug:
+  test_timeout: 600
+  worker_parallelism: 4
+  synthetic_bug_budget: 0.05
+ci:
+  enforce_license: true
+  enforce_schema: true
+  enforce_duplication: true
+  enforce_security: true
+legal:
+  copyleft_include: false
+  legal_review_required: true

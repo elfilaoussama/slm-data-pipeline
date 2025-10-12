@@ -1,0 +1,13 @@
+/usr/lib/python3.10/contextlib.py:142: SAWarning: Skipped unsupported reflection of expression-based index ix_flow_run__coalesce_start_time_expected_start_time_desc
+  next(self.gen)
+/usr/lib/python3.10/contextlib.py:142: SAWarning: Skipped unsupported reflection of expression-based index ix_flow_run__coalesce_start_time_expected_start_time_asc
+  next(self.gen)
+13:44:34.035 | INFO    | prefect.engine - Created flow run 'rose-chamois' for flow 'slm-pipeline'
+13:44:34.505 | INFO    | Flow run 'rose-chamois' - Starting repo discovery…
+13:44:34.577 | INFO    | Flow run 'rose-chamois' - Created task run 't_discover_repos-0' for task 't_discover_repos'
+13:44:34.856 | INFO    | Flow run 'rose-chamois' - Submitted task run 't_discover_repos-0' for execution.
+13:44:39.141 | INFO    | Task run 't_discover_repos-0' - Finished in state Completed()
+13:44:39.154 | INFO    | Flow run 'rose-chamois' - Discovered 0 repos; ingesting…
+13:44:39.155 | INFO    | Flow run 'rose-chamois' - 0 repos passed security/license gate; parsing…
+13:44:39.157 | WARNING | Flow run 'rose-chamois' - No AST dirs produced; exiting early.
+13:44:39.212 | INFO    | Flow run 'rose-chamois' - Finished in state Completed('All states completed.')

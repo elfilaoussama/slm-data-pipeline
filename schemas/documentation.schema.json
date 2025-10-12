@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DocumentationRecord",
+  "type": "object",
+  "required": ["id", "task", "language", "license", "provenance", "code", "docstring", "source", "synthetic"],
+  "properties": {
+    "id": {"type": "string"},
+    "task": {"type": "string", "const": "documentation"},
+    "language": {"type": "string"},
+    "license": {"type": ["string", "null"]},
+    "provenance": {"$ref": "provenance.schema.json"},
+    "code": {"type": "string"},
+    "docstring": {"type": "string"},
+    "source": {"type": "string"},
+    "synthetic": {"type": "boolean"}
+  }
+}

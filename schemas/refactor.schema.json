@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RefactorRecord",
+  "type": "object",
+  "required": ["id", "task", "language", "provenance", "pre", "post", "diff", "refactor_type", "verified", "synthetic"],
+  "properties": {
+    "id": {"type": "string"},
+    "task": {"type": "string", "const": "refactor"},
+    "language": {"type": "string"},
+    "provenance": {"$ref": "provenance.schema.json"},
+    "pre": {"type": "string"},
+    "post": {"type": "string"},
+    "diff": {"type": "string"},
+    "refactor_type": {"type": "string"},
+    "verified": {"type": "boolean"},
+    "synthetic": {"type": "boolean"}
+  }
+}

@@ -1,0 +1,35 @@
+14:19:36.964 | INFO    | prefect.engine - Created flow run 'augmented-guillemot' for flow 'slm-pipeline'
+14:19:37.109 | INFO    | Flow run 'augmented-guillemot' - Starting repo discovery…
+14:19:37.275 | INFO    | Flow run 'augmented-guillemot' - Created task run 't_discover_repos-0' for task 't_discover_repos'
+14:19:37.569 | INFO    | Flow run 'augmented-guillemot' - Submitted task run 't_discover_repos-0' for execution.
+14:19:52.707 | WARNING | urllib3.connectionpool - Retrying (GithubRetry(total=9, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x7fcc0c299480>: Failed to resolve 'api.github.com' ([Errno -3] Temporary failure in name resolution)")': /search/repositories?q=pandas+license%3Absd-3-clause+language%3Apython&per_page=50
+14:20:30.129 | INFO    | Task run 't_discover_repos-0' - Finished in state Completed()
+14:20:30.137 | INFO    | Flow run 'augmented-guillemot' - Discovered 1 repos; ingesting…
+14:20:30.169 | INFO    | Flow run 'augmented-guillemot' - Created task run 't_ingest_repo-0' for task 't_ingest_repo'
+14:20:30.172 | INFO    | Flow run 'augmented-guillemot' - Submitted task run 't_ingest_repo-0' for execution.
+14:21:50.543 | INFO    | Task run 't_ingest_repo-0' - Finished in state Completed()
+14:21:50.584 | INFO    | Flow run 'augmented-guillemot' - Created task run 't_security_gate-0' for task 't_security_gate'
+14:21:50.586 | INFO    | Flow run 'augmented-guillemot' - Submitted task run 't_security_gate-0' for execution.
+14:22:20.105 | INFO    | Task run 't_security_gate-0' - Finished in state Completed()
+14:22:20.107 | INFO    | Flow run 'augmented-guillemot' - 1 repos passed security/license gate; parsing…
+14:22:20.142 | INFO    | Flow run 'augmented-guillemot' - Created task run 't_parse_extract-0' for task 't_parse_extract'
+14:22:20.144 | INFO    | Flow run 'augmented-guillemot' - Submitted task run 't_parse_extract-0' for execution.
+14:23:00.718 | INFO    | Task run 't_parse_extract-0' - Finished in state Completed()
+14:23:00.754 | INFO    | Flow run 'augmented-guillemot' - Created task run 't_normalize_dedup-0' for task 't_normalize_dedup'
+14:23:00.756 | INFO    | Flow run 'augmented-guillemot' - Submitted task run 't_normalize_dedup-0' for execution.
+14:24:11.021 | INFO    | Task run 't_normalize_dedup-0' - Finished in state Completed()
+14:24:11.055 | INFO    | Flow run 'augmented-guillemot' - Created task run 't_task_transformers-0' for task 't_task_transformers'
+14:24:11.056 | INFO    | Flow run 'augmented-guillemot' - Submitted task run 't_task_transformers-0' for execution.
+14:24:29.524 | INFO    | Task run 't_task_transformers-0' - Finished in state Completed()
+14:24:29.571 | INFO    | Flow run 'augmented-guillemot' - Created task run 't_validate_and_version-0' for task 't_validate_and_version'
+14:24:29.574 | INFO    | Flow run 'augmented-guillemot' - Submitted task run 't_validate_and_version-0' for execution.
+14:25:31.579 | INFO    | Task run 't_validate_and_version-0' - Finished in state Completed()
+14:25:31.581 | INFO    | Flow run 'augmented-guillemot' - Pipeline complete.
+14:25:31.583 | INFO    | Flow run 'augmented-guillemot' - {
+  "final": {
+    "completion": "data/final/completion.jsonl",
+    "documentation": "data/final/documentation.jsonl"
+  },
+  "manifest": "data/final/manifest.json"
+}
+14:25:31.632 | INFO    | Flow run 'augmented-guillemot' - Finished in state Completed('All states completed.')

@@ -1,0 +1,23 @@
+13:47:46.044 | INFO    | prefect.engine - Created flow run 'onyx-roadrunner' for flow 'slm-pipeline'
+13:47:46.160 | INFO    | Flow run 'onyx-roadrunner' - Starting repo discovery…
+13:47:46.243 | INFO    | Flow run 'onyx-roadrunner' - Created task run 't_discover_repos-0' for task 't_discover_repos'
+13:47:46.666 | INFO    | Flow run 'onyx-roadrunner' - Submitted task run 't_discover_repos-0' for execution.
+/mnt/e/PROJECTS/arkx/code_data_pipline/slm-pipeline/scripts/repo_discovery.py:115: UserWarning: Calling a `list()` method without specifying `get_all=True` or `iterator=True` will return a maximum of 50 items. Your query returned 50 of many items. See https://python-gitlab.readthedocs.io/en/v4.12.0/api-usage.html#pagination for more details. If this was done intentionally, then this warning can be supressed by adding the argument `get_all=False` to the `list()` call. (python-gitlab: /mnt/e/PROJECTS/arkx/code_data_pipline/slm-pipeline/scripts/repo_discovery.py:115)
+  projects = gl.projects.list(search=keyword_query, visibility='public', per_page=50)
+13:50:13.947 | INFO    | Task run 't_discover_repos-0' - Finished in state Completed()
+13:50:14.037 | INFO    | Flow run 'onyx-roadrunner' - Discovered 2 repos; ingesting…
+13:50:14.139 | INFO    | Flow run 'onyx-roadrunner' - Created task run 't_ingest_repo-0' for task 't_ingest_repo'
+13:50:14.148 | INFO    | Flow run 'onyx-roadrunner' - Submitted task run 't_ingest_repo-0' for execution.
+13:50:22.820 | INFO    | Task run 't_ingest_repo-0' - Finished in state Completed()
+13:50:22.988 | INFO    | Flow run 'onyx-roadrunner' - Created task run 't_security_gate-0' for task 't_security_gate'
+13:50:23.003 | INFO    | Flow run 'onyx-roadrunner' - Submitted task run 't_security_gate-0' for execution.
+13:57:56.329 | INFO    | Task run 't_security_gate-0' - Finished in state Completed()
+13:57:56.397 | INFO    | Flow run 'onyx-roadrunner' - Created task run 't_ingest_repo-1' for task 't_ingest_repo'
+13:57:56.404 | INFO    | Flow run 'onyx-roadrunner' - Submitted task run 't_ingest_repo-1' for execution.
+13:59:27.931 | INFO    | Task run 't_ingest_repo-1' - Finished in state Completed()
+13:59:28.003 | INFO    | Flow run 'onyx-roadrunner' - Created task run 't_security_gate-1' for task 't_security_gate'
+13:59:28.010 | INFO    | Flow run 'onyx-roadrunner' - Submitted task run 't_security_gate-1' for execution.
+13:59:56.950 | INFO    | Task run 't_security_gate-1' - Finished in state Completed()
+13:59:56.954 | INFO    | Flow run 'onyx-roadrunner' - 0 repos passed security/license gate; parsing…
+13:59:56.956 | WARNING | Flow run 'onyx-roadrunner' - No AST dirs produced; exiting early.
+13:59:57.039 | INFO    | Flow run 'onyx-roadrunner' - Finished in state Completed('All states completed.')

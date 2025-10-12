@@ -1,0 +1,17 @@
+14:02:17.005 | INFO    | prefect.engine - Created flow run 'towering-ladybug' for flow 'slm-pipeline'
+14:02:17.087 | INFO    | Flow run 'towering-ladybug' - Starting repo discovery…
+14:02:17.159 | INFO    | Flow run 'towering-ladybug' - Created task run 't_discover_repos-0' for task 't_discover_repos'
+14:02:17.473 | INFO    | Flow run 'towering-ladybug' - Submitted task run 't_discover_repos-0' for execution.
+/mnt/e/PROJECTS/arkx/code_data_pipline/slm-pipeline/scripts/repo_discovery.py:115: UserWarning: Calling a `list()` method without specifying `get_all=True` or `iterator=True` will return a maximum of 50 items. Your query returned 50 of many items. See https://python-gitlab.readthedocs.io/en/v4.12.0/api-usage.html#pagination for more details. If this was done intentionally, then this warning can be supressed by adding the argument `get_all=False` to the `list()` call. (python-gitlab: /mnt/e/PROJECTS/arkx/code_data_pipline/slm-pipeline/scripts/repo_discovery.py:115)
+  projects = gl.projects.list(search=keyword_query, visibility='public', per_page=50)
+14:02:24.612 | INFO    | Task run 't_discover_repos-0' - Finished in state Completed()
+14:02:24.621 | INFO    | Flow run 'towering-ladybug' - Discovered 1 repos; ingesting…
+14:02:24.660 | INFO    | Flow run 'towering-ladybug' - Created task run 't_ingest_repo-0' for task 't_ingest_repo'
+14:02:24.663 | INFO    | Flow run 'towering-ladybug' - Submitted task run 't_ingest_repo-0' for execution.
+14:02:26.440 | INFO    | Task run 't_ingest_repo-0' - Finished in state Completed()
+14:02:26.486 | INFO    | Flow run 'towering-ladybug' - Created task run 't_security_gate-0' for task 't_security_gate'
+14:02:26.489 | INFO    | Flow run 'towering-ladybug' - Submitted task run 't_security_gate-0' for execution.
+14:02:51.425 | INFO    | Task run 't_security_gate-0' - Finished in state Completed()
+14:02:51.428 | INFO    | Flow run 'towering-ladybug' - 0 repos passed security/license gate; parsing…
+14:02:51.430 | WARNING | Flow run 'towering-ladybug' - No AST dirs produced; exiting early.
+14:02:51.480 | INFO    | Flow run 'towering-ladybug' - Finished in state Completed('All states completed.')

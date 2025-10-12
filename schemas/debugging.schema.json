@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DebuggingRecord",
+  "type": "object",
+  "required": ["id", "task", "language", "license", "provenance", "pre_snippet", "post_snippet", "diff", "failing_tests", "stack_trace", "synthetic"],
+  "properties": {
+    "id": {"type": "string"},
+    "task": {"type": "string", "const": "debugging"},
+    "language": {"type": "string"},
+    "license": {"type": ["string", "null"]},
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "pre_commit": {"type": "string"},
+        "post_commit": {"type": "string"},
+        "repo_full_name": {"type": "string"}
+      },
+      "required": ["pre_commit", "post_commit", "repo_full_name"]
+    },
+    "pre_snippet": {"type": "string"},
+    "post_snippet": {"type": "string"},
+    "diff": {"type": "string"},
+    "failing_tests": {"type": "array", "items": {"type": "string"}},
+    "stack_trace": {"type": "array", "items": {"type": "string"}},
+    "synthetic": {"type": "boolean"}
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Provenance",
+  "type": "object",
+  "required": [
+    "repo_full_name",
+    "source",
+    "clone_url",
+    "default_branch",
+    "commit_sha",
+    "commit_date",
+    "file_path",
+    "lines",
+    "license_spdx",
+    "license_text",
+    "scan_tool_versions",
+    "scan_timestamp"
+  ],
+  "properties": {
+    "repo_full_name": {"type": "string"},
+    "source": {"type": "string", "enum": ["github", "gitlab"]},
+    "clone_url": {"type": "string"},
+    "default_branch": {"type": "string"},
+    "commit_sha": {"type": "string"},
+    "commit_date": {"type": "string"},
+    "file_path": {"type": "string"},
+    "lines": {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2},
+    "license_spdx": {"type": ["string", "null"]},
+    "license_text": {"type": ["string", "null"]},
+    "scan_tool_versions": {"type": "object"},
+    "scan_timestamp": {"type": "string"},
+    "semantic_score": {"type": ["number", "null"]}
+  }
+}
