@@ -85,6 +85,7 @@ def main(
     worker_parallelism: int = 4,
     config_path: str | None = None,
     manifest_path: str | None = None,
+    skip_security: bool = False,
 ):
     """
     Orchestrates the pilot pipeline: discovery -> ingest -> security -> extract -> dedup -> tasks.
@@ -147,11 +148,32 @@ def main(
         if not isinstance(snapshot, dict) or snapshot.get("status") != "ok":
             logger.warning(f"Skipping repo due to ingest error: {snapshot.get('error') if isinstance(snapshot, dict) else 'unknown'}")
             continue
-        gated = t_security_gate.submit(snapshot, cfg).result()
-        if gated.get("status") == "ok":
+        if skip_security:
+            # Bypass security stage: ensure provenance has minimal scan fields for schema compliance
+            try:
+                prov_path = Path(snapshot["provenance_path"])
+                prov = json.loads(prov_path.read_text(encoding="utf-8"))
+            except Exception:
+                prov = {}
+                prov_path = None
+            prov.setdefault("scan_tool_versions", {"security": "skipped"})
+            prov["scan_timestamp"] = datetime.utcnow().isoformat()
+            if prov_path is not None:
+                try:
+                    prov_path.write_text(json.dumps(prov, indent=2), encoding="utf-8")
+                except Exception:
+                    pass
+            gated = snapshot | {"status": "ok"}
             gated_results.append(gated)
+        else:
+            gated = t_security_gate.submit(snapshot, cfg).result()
+            if gated.get("status") == "ok":
+                gated_results.append(gated)
 
-    logger.info(f"{len(gated_results)} repos passed security/license gate; parsing…")
+    if skip_security:
+        logger.info(f"{len(gated_results)} repos (security skipped); parsing…")
+    else:
+        logger.info(f"{len(gated_results)} repos passed security/license gate; parsing…")
 
     ast_dirs = []
     for gated in gated_results:
@@ -199,6 +221,7 @@ if __name__ == "__main__":
     parser.add_argument("--worker-parallelism", type=int, default=4, help="Parallel workers for debugging step (reserved)")
     parser.add_argument("--config-path", type=str, default=None, help="Path to configs.yml override")
     parser.add_argument("--manifest-path", type=str, default=None, help="Path to an existing discovery manifest JSON to skip discovery")
+    parser.add_argument("--skip-security", action="store_true", help="Skip the security/license gate stage (bypass scanners)")
 
     args = parser.parse_args()
 
@@ -221,4 +244,5 @@ if __name__ == "__main__":
         worker_parallelism=args.worker_parallelism,
         config_path=args.config_path,
     manifest_path=args.manifest_path,
+    skip_security=args.skip_security,
     )
