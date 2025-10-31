@@ -3,12 +3,24 @@ import random
 from pathlib import Path
 from typing import List, Dict
 
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception:
+    SentenceTransformer = None  # type: ignore
+try:
+    import numpy as np
+except Exception:
+    np = None  # type: ignore
+try:
+    from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
+except Exception:
+    cosine_similarity = None  # type: ignore
 
 
 def calibrate(queries: List[str], candidates: List[Dict], topk: int = 200) -> Dict:
+    if SentenceTransformer is None or np is None or cosine_similarity is None:
+        # Fallback heuristic if dependencies unavailable
+        return {"threshold": 0.7, "p10": 0.0}
     model = SentenceTransformer('all-MiniLM-L6-v2')
     texts = [f"{c['repo_full_name']}\n{c.get('description','')}\n{' '.join(c.get('topics',[]))}\n{c.get('readme_head','')}" for c in candidates]
     emb_items = model.encode(texts, convert_to_numpy=True)
