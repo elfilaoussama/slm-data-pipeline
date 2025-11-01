@@ -12,6 +12,27 @@
     "code": {"type": "string"},
     "docstring": {"type": "string"},
     "source": {"type": "string"},
-    "synthetic": {"type": "boolean"}
+    "synthetic": {"type": "boolean"},
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "documentation": {
+          "type": "object",
+          "properties": {
+            "score": {"type": ["number", "null"]},
+            "tier": {"type": ["string", "null"]},
+            "synthetic": {"type": ["boolean", "null"]}
+          }
+        },
+        "quality": {
+          "type": "object",
+          "properties": {
+            "cyclomatic_complexity": {"type": ["number", "null"]},
+            "nesting_depth": {"type": ["number", "null"]},
+            "lines_of_code": {"type": ["number", "null"]}
+          }
+        }
+      }
+    }
   }
 }

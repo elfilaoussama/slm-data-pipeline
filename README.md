@@ -22,6 +22,19 @@ python pipeline.py
 
 Windows quick run script is available: `reproduce.ps1`.
 
+## Project flow
+End-to-end stages, each linked to its implementation and docs:
+
+1. Discover → [scripts/repo_discovery.py](scripts/repo_discovery.py)
+2. Ingest/clone → [scripts/ingest_repo.py](scripts/ingest_repo.py)
+3. Security & license gate → [scripts/security_scan.py](scripts/security_scan.py) · See [Security & licensing](docs/security-and-licensing.md)
+4. Parse & extract → [scripts/parse_extract.py](scripts/parse_extract.py)
+5. Normalize & dedup → [scripts/normalize_dedup.py](scripts/normalize_dedup.py)
+6. Task datasets → [scripts/task_transformers.py](scripts/task_transformers.py)
+7. Validate & version → [scripts/validate_and_version.py](scripts/validate_and_version.py)
+
+See the detailed walkthrough in [Pipeline stages](docs/pipeline-stages.md).
+
 ## Outputs
 - Manifests: `manifests/discovered_repos.json`
 - Repo snapshots: `data/raw/`
@@ -30,13 +43,33 @@ Windows quick run script is available: `reproduce.ps1`.
 - Security reports: `.reports/security/`
 - Validation summary: `data/final/manifest.json`
 
+## Quality filters via CLI
+You can control the function-level quality gate without editing `configs.yml`:
+
+```
+# Disable quality filtering entirely (keep all extracted functions before dedup)
+python pipeline.py --no-quality
+
+# Tighten thresholds
+python pipeline.py \
+	--quality-min-loc 8 \
+	--quality-max-cyclomatic 10 \
+	--quality-max-nesting 4
+
+# Drop synthetic docstrings fabricated during extraction
+python pipeline.py --quality-disallow-synthetic-docs
+```
+
+These flags override `quality_filters` in `configs.yml` for the current run only.
+
 ## Docs
-- QUICKSTART: `QUICKSTART.md`
-- Pipeline stages: `docs/pipeline-stages.md`
-- Configuration/CLI: `docs/configuration.md`
-- Security & licensing: `docs/security-and-licensing.md`
-- Schemas: `docs/data-schemas.md`
-- Troubleshooting: `docs/troubleshooting.md`
+- [Quickstart](QUICKSTART.md)
+- [Pipeline stages](docs/pipeline-stages.md)
+- [Configuration and CLI](docs/configuration.md)
+- [Security & licensing](docs/security-and-licensing.md)
+- [Data schemas](docs/data-schemas.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Running in WSL](docs/running-in-wsl.md)
 
 ## License Policy
 Exclude copyleft (GPL/LGPL/AGPL) by default. The pipeline gates licenses and stores `license_spdx` text in provenance; do not publish shards with disallowed licenses.

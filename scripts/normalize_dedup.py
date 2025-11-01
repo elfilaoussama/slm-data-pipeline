@@ -45,6 +45,31 @@ def normalize_and_dedup(ast_dir: Path, cfg: Dict) -> Dict:
                 else:
                     rec['code_norm'] = rec['code']
                 rec['exact_hash'] = _hash_text(rec['code_norm'])
+                # Quality filters
+                qf = cfg.get('quality_filters', {})
+                if qf.get('enabled') is False:
+                    # Skip all quality gates; still compute hashes for dedup
+                    items.append(rec)
+                    continue
+                min_loc = int(qf.get('min_loc', 5))
+                max_loc = int(qf.get('max_loc', 400))
+                max_cyc = float(qf.get('max_cyclomatic', 15))
+                max_nest = int(qf.get('max_nesting', 5))
+                drop_trivial = bool(qf.get('drop_trivial', True))
+                allow_synth = bool(qf.get('allow_synthetic_docs', True))
+                loc = int(rec.get('loc', 0))
+                metaq = (rec.get('metadata') or {}).get('quality') or {}
+                docmeta = (rec.get('metadata') or {}).get('documentation') or {}
+                cyc = float(metaq.get('cyclomatic_complexity', 1))
+                nest = int(metaq.get('nesting_depth', 0))
+                if loc < min_loc or loc > max_loc:
+                    continue
+                if cyc > max_cyc or nest > max_nest:
+                    continue
+                if drop_trivial and loc <= min_loc and cyc <= 1.0:
+                    continue
+                if not allow_synth and bool(docmeta.get('synthetic', False)):
+                    continue
                 items.append(rec)
 
     # Exact dedup

@@ -22,6 +22,8 @@
     "diff": {"type": "string"},
     "failing_tests": {"type": "array", "items": {"type": "string"}},
     "stack_trace": {"type": "array", "items": {"type": "string"}},
+    "bug_type": {"type": ["string", "null"]},
+    "difficulty": {"type": ["string", "null"]},
     "synthetic": {"type": "boolean"}
   }
 }

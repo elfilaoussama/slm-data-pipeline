@@ -9,7 +9,14 @@ stages:
       - scripts/parse_extract.py
       - scripts/normalize_dedup.py
       - scripts/task_transformers.py
+      - scripts/validate_and_version.py
       - configs.yml
     outs:
       - data/final/completion.jsonl
       - data/final/documentation.jsonl
+      - data/final/refactor.jsonl
+      - data/final/debugging.jsonl
+      - data/final/manifest.json
+      - data/final/refactor.jsonl
+      - data/final/debugging.jsonl
+      - data/final/manifest.json

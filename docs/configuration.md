@@ -1,3 +1,22 @@
+# Configuration
+
+[Back to Pipeline stages](pipeline-stages.md) · [Quickstart](../QUICKSTART.md) · [Security & licensing](security-and-licensing.md)
+
+Edit `configs.yml` to control discovery, extraction, deduplication, security, and quality filters.
+
+Key sections and related CLI overrides:
+- semantic, keywords → discovery
+  - CLI: `--semantic-query`, `--semantic-topk`, `--semantic-threshold`, `--keyword-query`
+- extract → function size bounds
+  - CLI: `--min-function-loc`, `--max-function-loc`
+- quality_filters → function quality gating
+  - Toggle and thresholds; CLI: `--no-quality`, `--quality-min-loc`, `--quality-max-loc`, `--quality-max-cyclomatic`, `--quality-max-nesting`, `--quality-allow-synthetic-docs|--quality-disallow-synthetic-docs`
+- dedup → near-duplicate detection
+  - CLI: `--dedup-shingle-size`, `--minhash-perms`
+- security → license/compliance and scanners
+  - CLI: `--skip-security`
+
+See the full flow in [Pipeline stages](pipeline-stages.md) and [schemas](data-schemas.md) for output formats.
 # Configuration and CLI
 
 Config file: `configs.yml`. Override most values using CLI flags in `pipeline.py`.

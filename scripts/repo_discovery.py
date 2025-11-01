@@ -11,6 +11,18 @@ import hashlib
 import numpy as np
 from github import Github
 import gitlab
+# Load .env early so GH_TOKENS / GL_TOKEN are available even when running this module directly
+try:
+    from dotenv import load_dotenv, find_dotenv  # type: ignore
+    # Prefer a discovered .env (searches from CWD upward); fall back to slm-pipeline/.env
+    dotenv_path = find_dotenv(usecwd=True)
+    if dotenv_path:
+        load_dotenv(dotenv_path=dotenv_path)
+    else:
+        load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+except Exception:
+    # If python-dotenv isn't available or load fails, continue; callers may have loaded env already
+    pass
 try:
     from sentence_transformers import SentenceTransformer  # optional
 except Exception:
@@ -78,76 +90,122 @@ def _readme_head(text: str, n_chars: int = 2000) -> str:
 
 
 def _gh_search(keyword_query: str, min_stars: int, language_filters: List[str], max_items: int = 100) -> List[Dict]:
+    """Search GitHub with proper OR semantics for languages and paginate until max_items."""
     gh = _get_github_client()
     qualifiers = []
     if min_stars:
         qualifiers.append(f"stars:>={min_stars}")
-    for lang in language_filters:
-        qualifiers.append(f"language:{lang}")
-    q = f"{keyword_query} " + ' '.join(qualifiers)
-    results = []
+    base_q = f"{keyword_query} " + ' '.join(qualifiers)
+    langs = language_filters or []
+    # GitHub search does not support multiple language: qualifiers as OR; run per-language if provided
+    language_queries = langs if langs else [None]
+    seen = set()
+    out: List[Dict] = []
     try:
-        for repo in gh.search_repositories(query=q)[:max_items]:
-            try:
-                license_hint = repo.license.spdx_id if repo.license else None
-            except Exception:
-                license_hint = None
-            results.append({
-                'source': 'github',
-                'repo_full_name': repo.full_name,
-                'clone_url': repo.clone_url,
-                'default_branch': repo.default_branch or 'main',
-                'stars': repo.stargazers_count,
-                'license_hint': license_hint,
-                'url': repo.html_url,
-                'description': repo.description or '',
-                'topics': getattr(repo, 'topics', []) or [],
-            })
+        for lang in language_queries:
+            q = base_q if not lang else f"{base_q} language:{lang}"
+            # sort by stars to get most relevant first
+            pl = gh.search_repositories(query=q, sort="stars", order="desc")
+            count = 0
+            for repo in pl:  # iterate paginated list
+                key = ("github", repo.full_name)
+                if key in seen:
+                    continue
+                seen.add(key)
+                try:
+                    license_hint = repo.license.spdx_id if getattr(repo, 'license', None) else None
+                except Exception:
+                    license_hint = None
+                try:
+                    topics = repo.get_topics()  # may require preview header; handled by PyGithub internally
+                except Exception:
+                    topics = []
+                out.append({
+                    'source': 'github',
+                    'repo_full_name': repo.full_name,
+                    'clone_url': repo.clone_url,
+                    'default_branch': getattr(repo, 'default_branch', None) or 'main',
+                    'stars': getattr(repo, 'stargazers_count', 0) or 0,
+                    'license_hint': license_hint,
+                    'url': repo.html_url,
+                    'description': repo.description or '',
+                    'topics': topics or [],
+                })
+                count += 1
+                if len(out) >= max_items:
+                    return out
+                # Light pacing to be gentle on API if unauthenticated
+                if count % 50 == 0:
+                    time.sleep(0.5)
     except Exception:
+        # Swallow to keep discovery resilient; downstream will continue with what we have
         pass
-    return results
+    return out
 
 
 def _gl_search(keyword_query: str, min_stars: int, language_filters: List[str], max_items: int = 100) -> List[Dict]:
+    """Search GitLab public projects; use iterator pagination and try languages endpoint when filtering."""
     gl = _get_gitlab_client()
-    results = []
+    out: List[Dict] = []
+    seen = set()
     try:
-        projects = gl.projects.list(search=keyword_query, visibility='public', per_page=50)
-        for proj in projects[:max_items]:
+        # iterator=True to paginate lazily
+        projects = gl.projects.list(search=keyword_query, visibility='public', per_page=50, iterator=True)
+        for proj in projects:
             try:
-                topics = proj.tag_list or []
-                license_hint = getattr(proj, 'license', None)
-                default_branch = getattr(proj, 'default_branch', 'main')
-                star_count = getattr(proj, 'star_count', 0)
+                key = ("gitlab", proj.path_with_namespace)
+                if key in seen:
+                    continue
+                star_count = getattr(proj, 'star_count', 0) or 0
                 if min_stars and star_count < min_stars:
                     continue
-                # Simple language filter heuristic on topics/description
+                # Language filter: prefer API endpoint; fallback to heuristic on topics/description
                 lang_ok = True
                 if language_filters:
-                    hay = (proj.description or '') + ' ' + ' '.join(topics)
-                    if not any(lang.lower() in hay.lower() for lang in language_filters):
-                        lang_ok = False
+                    try:
+                        langs_map = proj.languages()  # {'Python': 87.0, ...}
+                        langs_keys = {k.lower() for k in (langs_map or {}).keys()}
+                        lang_ok = any(l.lower() in langs_keys for l in language_filters)
+                    except Exception:
+                        topics = getattr(proj, 'tag_list', []) or []
+                        hay = (proj.description or '') + ' ' + ' '.join(topics)
+                        lang_ok = any(l.lower() in hay.lower() for l in language_filters)
                 if not lang_ok:
                     continue
-                results.append({
+
+                license_hint = None
+                try:
+                    lic = getattr(proj, 'license', None)
+                    if isinstance(lic, dict):
+                        license_hint = lic.get('spdx_id') or lic.get('key') or lic.get('name')
+                    else:
+                        license_hint = lic
+                except Exception:
+                    license_hint = None
+
+                out.append({
                     'source': 'gitlab',
                     'repo_full_name': proj.path_with_namespace,
                     'clone_url': proj.http_url_to_repo,
-                    'default_branch': default_branch,
+                    'default_branch': getattr(proj, 'default_branch', None) or 'main',
                     'stars': star_count,
                     'license_hint': license_hint,
                     'url': proj.web_url,
                     'description': proj.description or '',
-                    'topics': topics,
+                    'topics': getattr(proj, 'tag_list', []) or [],
                 })
+                seen.add(key)
+                if len(out) >= max_items:
+                    break
             except Exception:
                 continue
     except Exception:
         pass
-    return results
+    return out
 
 
 def _fetch_readme_preview(item: Dict) -> str:
+    """Try several common README names, cache locally to avoid repeated fetches."""
     cache_p = CACHE_DIR / f"readme_{item['source'].lower()}_{item['repo_full_name'].replace('/', '_')}.txt"
     if cache_p.exists():
         try:
@@ -155,19 +213,20 @@ def _fetch_readme_preview(item: Dict) -> str:
         except Exception:
             pass
     text = ''
-    try:
-        if item['source'] == 'github':
-            # Use raw URL heuristic for README
-            resp = requests.get(f"https://raw.githubusercontent.com/{item['repo_full_name']}/{item['default_branch']}/README.md", timeout=10)
-            if resp.status_code == 200:
+    names = ["README.md", "README.rst", "README", "readme.md", "Readme.md"]
+    base = None
+    if item['source'] == 'github':
+        base = f"https://raw.githubusercontent.com/{item['repo_full_name']}/{item['default_branch']}"
+    else:
+        base = f"https://gitlab.com/{item['repo_full_name']}/-/raw/{item['default_branch']}"
+    for nm in names:
+        try:
+            resp = requests.get(f"{base}/{nm}", timeout=10)
+            if resp.status_code == 200 and resp.text:
                 text = resp.text
-        else:
-            # GitLab raw README
-            resp = requests.get(f"https://gitlab.com/{item['repo_full_name']}/-/raw/{item['default_branch']}/README.md", timeout=10)
-            if resp.status_code == 200:
-                text = resp.text
-    except Exception:
-        text = ''
+                break
+        except Exception:
+            continue
     try:
         cache_p.parent.mkdir(parents=True, exist_ok=True)
         cache_p.write_text(text, encoding='utf-8')
@@ -185,9 +244,18 @@ def discover_repos(params: Dict, cfg: Dict) -> Path:
     max_repos = int(cfg.get('max_repos', 50))
 
     keyword_query = params.get('keyword_query') or cfg.get('keywords', {}).get('query', '')
-    items = []
-    items += _gh_search(keyword_query, min_stars, languages, max_items=semantic_cfg.get('topk', 200))
-    items += _gl_search(keyword_query, min_stars, languages, max_items=semantic_cfg.get('topk', 200))
+    items: List[Dict] = []
+    # Pull from both sources and deduplicate by (source, repo_full_name)
+    max_per_source = int(semantic_cfg.get('topk', 200))
+    gh_items = _gh_search(keyword_query, min_stars, languages, max_items=max_per_source)
+    gl_items = _gl_search(keyword_query, min_stars, languages, max_items=max_per_source)
+    seen_pairs = set()
+    for it in gh_items + gl_items:
+        key = (it['source'], it['repo_full_name'])
+        if key in seen_pairs:
+            continue
+        seen_pairs.add(key)
+        items.append(it)
 
     # Build corpus texts for semantic ranking
     texts = []

@@ -1,12 +1,21 @@
 # Data schemas
 
-Schemas live in `schemas/`. The validator checks all final JSONL shards.
+[Back to Pipeline stages](pipeline-stages.md) · [Quickstart](../QUICKSTART.md) · [Configuration](configuration.md)
 
-- `completion.schema.json`
-- `documentation.schema.json`
-- `refactor.schema.json`
-- `debugging.schema.json`
-- `provenance.schema.json` (nested)
+JSONL outputs live in `data/final/`:
+
+- `completion.jsonl`
+- `documentation.jsonl`
+- `refactor.jsonl`
+- `debugging.jsonl`
+
+Schemas live in [`schemas/`](../schemas/):
+
+- [completion.schema.json](../schemas/completion.schema.json)
+- [documentation.schema.json](../schemas/documentation.schema.json)
+- [refactor.schema.json](../schemas/refactor.schema.json)
+- [debugging.schema.json](../schemas/debugging.schema.json)
+- [provenance.schema.json](../schemas/provenance.schema.json) (nested)
 
 Validate manually (example):
 ```
@@ -19,3 +28,5 @@ for i,l in enumerate(open('data/final/completion.jsonl','r',encoding='utf-8')):
 print('ok')
 PY
 ```
+
+See [Pipeline stages](pipeline-stages.md) for where each file is produced and [scripts/validate_and_version.py](../scripts/validate_and_version.py) for validation.

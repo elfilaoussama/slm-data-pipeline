@@ -11,7 +11,13 @@
     "provenance": {"$ref": "provenance.schema.json"},
     "input": {"type": "object", "properties": {"prefix": {"type": "string"}}, "required": ["prefix"]},
     "output": {"type": "object", "properties": {"completion": {"type": "string"}}, "required": ["completion"]},
-    "metrics": {"type": "object"},
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "completion_type": {"type": ["string", "null"]},
+        "valid_syntax": {"type": ["boolean", "null"]}
+      }
+    },
     "synthetic": {"type": "boolean"}
   }
 }

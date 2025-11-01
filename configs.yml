@@ -48,6 +48,25 @@ debug:
   test_timeout: 600
   worker_parallelism: 4
   synthetic_bug_budget: 0.05
+quality_filters:
+  # Enable/disable function-level quality gating (can be overridden by --no-quality)
+  enabled: true
+  min_loc: 5
+  max_loc: 400
+  # Thresholds below can be overridden via CLI flags: --quality-min-loc, --quality-max-cyclomatic, --quality-max-nesting
+  max_cyclomatic: 15
+  max_nesting: 5
+  drop_trivial: true
+  allow_synthetic_docs: true
+generation:
+  ast_completion: true
+security:
+  enabled: true
+  scancode: true
+  semgrep: true
+  bandit: true
+  gitleaks: true
+  timeout_seconds: 900
 ci:
   enforce_license: true
   enforce_schema: true

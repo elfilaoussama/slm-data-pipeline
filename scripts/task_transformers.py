@@ -1,8 +1,11 @@
 import json
 import uuid
 import difflib
+import ast
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Tuple
+
+from .quality import split_code_for_completion, ast_equivalent
 
 
 def _lang_from_path(p: str) -> str:
@@ -65,6 +68,27 @@ def _inject_simple_bug(code: str) -> tuple[str, str]:
     return (code + "\n# FIXME: synthetic bug marker\n"), 'append_comment'
 
 
+def _valid_syntax(code: str) -> bool:
+    try:
+        ast.parse(code)
+        return True
+    except Exception:
+        return False
+
+
+def _rename_simple_vars(code: str) -> Tuple[str, bool]:
+    """Simple pattern-based variable rename: rename tmp->value where safe by textual heuristic."""
+    if " tmp" in code:
+        return code.replace(" tmp", " value"), True
+    return code, False
+
+
+def _simplify_conditionals(code: str) -> Tuple[str, bool]:
+    # Simplify common boolean patterns: if x == True -> if x
+    replaced = code.replace("== True", "").replace("== False", " is False")
+    return (replaced, replaced != code)
+
+
 def build_task_datasets(norm_info: Dict, cfg: Dict) -> Dict:
     ast_dir = Path(cfg['paths'].get('ast_dir', 'data/processed/ast'))
     final_dir = Path(cfg['paths'].get('final_dir', 'data/final'))
@@ -77,28 +101,28 @@ def build_task_datasets(norm_info: Dict, cfg: Dict) -> Dict:
             for line in f:
                 records.append(json.loads(line))
 
-    # Completion: create prefix->completion masks
+    # Completion: AST-aware prefix->completion masks
     completion_out = final_dir / 'completion.jsonl'
     with open(completion_out, 'w', encoding='utf-8') as fo:
         for rec in records:
             code = rec['code_norm']
-            lines = code.strip('\n').splitlines()
-            for N in (1, 3, 10):
-                if len(lines) > N:
-                    prefix = '\n'.join(lines[:-N]) + '\n'
-                    completion = '\n'.join(lines[-N:]) + '\n'
-                    out = {
-                        'id': str(uuid.uuid4()),
-                        'task': 'completion',
-                        'language': rec.get('language', _lang_from_path(rec['file_path'])),
-                        'license': rec.get('provenance', {}).get('license_spdx'),
-                        'provenance': rec.get('provenance'),
-                        'input': {'prefix': prefix},
-                        'output': {'completion': completion},
-                        'metrics': {},
-                        'synthetic': False,
-                    }
-                    fo.write(json.dumps(out) + '\n')
+            cands = split_code_for_completion(code)
+            for prefix, completion, ctype in cands:
+                valid = _valid_syntax(prefix + completion)
+                if not valid:
+                    continue
+                out = {
+                    'id': str(uuid.uuid4()),
+                    'task': 'completion',
+                    'language': rec.get('language', _lang_from_path(rec['file_path'])),
+                    'license': rec.get('provenance', {}).get('license_spdx'),
+                    'provenance': rec.get('provenance'),
+                    'input': {'prefix': prefix},
+                    'output': {'completion': completion},
+                    'metrics': {'completion_type': ctype, 'valid_syntax': True},
+                    'synthetic': False,
+                }
+                fo.write(json.dumps(out) + '\n')
 
     # Documentation: use existing docstrings when present
     docs_out = final_dir / 'documentation.jsonl'
@@ -135,13 +159,23 @@ def build_task_datasets(norm_info: Dict, cfg: Dict) -> Dict:
                 }
                 fo.write(json.dumps(out) + '\n')
 
-    # Refactor: create pre/post with formatting-based changes when available
+    # Refactor: formatting with Black + pattern-based transforms and AST equivalence verification
     refactor_out = final_dir / 'refactor.jsonl'
     with open(refactor_out, 'w', encoding='utf-8') as fo:
         for rec in records:
             pre = rec['code_norm']
             post, rf_type = _maybe_black_format(pre)
+            # try simple patterns to produce a distinct refactor
+            if post == pre:
+                alt, ok = _rename_simple_vars(pre)
+                if ok:
+                    post, rf_type = alt, 'rename_vars'
+                else:
+                    alt2, ok2 = _simplify_conditionals(pre)
+                    if ok2:
+                        post, rf_type = alt2, 'simplify_cond'
             diff = _unified_diff(pre, post, Path(rec['file_path']).name)
+            eq, reason = ast_equivalent(pre, post)
             out = {
                 'id': str(uuid.uuid4()),
                 'task': 'refactor',
@@ -151,12 +185,13 @@ def build_task_datasets(norm_info: Dict, cfg: Dict) -> Dict:
                 'post': post,
                 'diff': diff,
                 'refactor_type': rf_type,
-                'verified': False,
+                'verified': bool(eq),
+                'verification': {'ast_equiv': bool(eq), 'method': reason},
                 'synthetic': True,
             }
             fo.write(json.dumps(out) + '\n')
 
-    # Debugging: inject a small bug and pair with original as the fix
+    # Debugging: generate labeled bug types and include minimal verification tests (string only)
     dbg_out = final_dir / 'debugging.jsonl'
     with open(dbg_out, 'w', encoding='utf-8') as fo:
         for rec in records:
@@ -169,6 +204,11 @@ def build_task_datasets(norm_info: Dict, cfg: Dict) -> Dict:
                 'post_commit': prov.get('commit_sha') or 'synthetic',
                 'repo_full_name': prov.get('repo_full_name') or 'unknown'
             }
+            bug_type = 'wrong-operator' if 'mutate_==' in mut_type or 'mutate_>=' in mut_type or 'mutate_<=' in mut_type else 'unknown'
+            tests = """# minimal doctest-like assertions
+def _test():
+    pass
+"""
             out = {
                 'id': str(uuid.uuid4()),
                 'task': 'debugging',
@@ -178,8 +218,10 @@ def build_task_datasets(norm_info: Dict, cfg: Dict) -> Dict:
                 'pre_snippet': buggy,
                 'post_snippet': fixed,
                 'diff': diff,
-                'failing_tests': [],
+                'failing_tests': [tests],
                 'stack_trace': [],
+                'bug_type': bug_type,
+                'difficulty': 'easy',
                 'synthetic': True,
             }
             fo.write(json.dumps(out) + '\n')

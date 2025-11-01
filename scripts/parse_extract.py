@@ -4,6 +4,12 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
+from .quality import (
+    DocumentationQualityScorer,
+    cyclomatic_complexity,
+    nesting_depth as _nesting_depth,
+)
+
 # Tree-sitter optional; pilot uses Python's ast for Python only.
 
 
@@ -34,6 +40,17 @@ def _extract_python_functions(path: Path, min_loc: int, max_loc: int):
                 continue
             snippet = '\n'.join(lines[start-1:end])
             docstring = ast.get_docstring(node)
+            # Metrics
+            comp = cyclomatic_complexity(snippet)
+            nest = _nesting_depth(node)
+            params = [a.arg for a in getattr(node, 'args', None).args] if getattr(node, 'args', None) else []
+            dq = DocumentationQualityScorer()
+            docq = dq.score(getattr(node, 'name', ''), params, docstring)
+            synthetic_doc = False
+            if not docstring or not docstring.strip():
+                # fabricates concise doc template; keep original code unchanged
+                docstring = dq.synthetic_template(getattr(node, 'name', ''), params)
+                synthetic_doc = True
             results.append({
                 'language': 'python',
                 'file_path': str(path),
@@ -42,6 +59,18 @@ def _extract_python_functions(path: Path, min_loc: int, max_loc: int):
                 'loc': loc,
                 'code': snippet,
                 'docstring': docstring,
+                'metadata': {
+                    'documentation': {
+                        'score': docq['score'],
+                        'tier': docq['tier'],
+                        'synthetic': synthetic_doc,
+                    },
+                    'quality': {
+                        'cyclomatic_complexity': comp,
+                        'nesting_depth': nest,
+                        'lines_of_code': loc,
+                    },
+                },
             })
     return results
 

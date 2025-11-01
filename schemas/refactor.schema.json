@@ -13,6 +13,13 @@
     "diff": {"type": "string"},
     "refactor_type": {"type": "string"},
     "verified": {"type": "boolean"},
+    "verification": {
+      "type": "object",
+      "properties": {
+        "ast_equiv": {"type": ["boolean", "null"]},
+        "method": {"type": ["string", "null"]}
+      }
+    },
     "synthetic": {"type": "boolean"}
   }
 }

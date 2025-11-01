@@ -19,7 +19,16 @@ GITLEAKS_IMAGE = 'zricethezav/gitleaks:latest'
 
 
 def _run(cmd: list, cwd: Path = None, timeout: int = 1800) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+    try:
+        return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+    except Exception as e:
+        # Return a dummy CompletedProcess-like object on failure to keep pipeline resilient
+        class Dummy:
+            returncode = 1
+            stdout = ''
+            stderr = str(e)
+
+        return Dummy()  # type: ignore
 
 
 def _docker_run(image: str, mounts: list[tuple[Path, str]], args: list, workdir: str = '/work'):
@@ -35,19 +44,21 @@ def security_and_license_gate(snapshot_info: Dict, cfg: Dict) -> Dict:
     repo_path = Path(snapshot_info['repo_path'])
     reports_dir = Path(cfg['paths'].get('security_reports', '.reports/security'))
     reports_dir.mkdir(parents=True, exist_ok=True)
+    sec_cfg = cfg.get('security', {}) or {}
+    timeout = int(sec_cfg.get('timeout_seconds', 1800))
 
     allowed = set(cfg.get('allowed_licenses', []))
     detected_license = None
     license_text = None
     scancode_out = reports_dir / f"{work_dir.name}_scancode.json"
-    if DOCKER_AVAILABLE:
+    if DOCKER_AVAILABLE and sec_cfg.get('scancode', True):
         scancode_cmd = _docker_run(
             SCANCODE_IMAGE,
             [(repo_path, '/src'), (reports_dir, '/out')],
             ['-l', '--license-text', '--json-pp', f"/out/{scancode_out.name}", '/src'],
             workdir='/src'
         )
-        _run(scancode_cmd)
+        _run(scancode_cmd, timeout=timeout)
     try:
         if scancode_out.exists():
             data = json.loads(scancode_out.read_text(encoding='utf-8'))
@@ -70,13 +81,16 @@ def security_and_license_gate(snapshot_info: Dict, cfg: Dict) -> Dict:
     bandit_out = reports_dir / f"{work_dir.name}_bandit.json"
     gitleaks_out = reports_dir / f"{work_dir.name}_gitleaks.json"
     if DOCKER_AVAILABLE:
-        semgrep_cmd = _docker_run(SEMGREP_IMAGE, [(repo_path, '/src'), (reports_dir, '/out')], ['semgrep', '--json', '-o', f"/out/{semgrep_out.name}", '-q', '-r', 'auto', '/src'], workdir='/src')
-        _run(semgrep_cmd)
-        bandit_cmd = _docker_run(BANDIT_IMAGE, [(repo_path, '/src'), (reports_dir, '/out')], ['bandit', '-r', '/src', '-f', 'json', '-o', f"/out/{bandit_out.name}"])
-        _run(bandit_cmd)
-        # Gitleaks for secrets
-        gitleaks_cmd = _docker_run(GITLEAKS_IMAGE, [(repo_path, '/src'), (reports_dir, '/out')], ['detect', '--no-git', '--report-format', 'json', '--report-path', f"/out/{gitleaks_out.name}"])
-        _run(gitleaks_cmd)
+        if sec_cfg.get('semgrep', True):
+            semgrep_cmd = _docker_run(SEMGREP_IMAGE, [(repo_path, '/src'), (reports_dir, '/out')], ['semgrep', '--json', '-o', f"/out/{semgrep_out.name}", '-q', '-r', 'auto', '/src'], workdir='/src')
+            _run(semgrep_cmd, timeout=timeout)
+        if sec_cfg.get('bandit', True):
+            bandit_cmd = _docker_run(BANDIT_IMAGE, [(repo_path, '/src'), (reports_dir, '/out')], ['bandit', '-r', '/src', '-f', 'json', '-o', f"/out/{bandit_out.name}"])
+            _run(bandit_cmd, timeout=timeout)
+        if sec_cfg.get('gitleaks', True):
+            # Gitleaks for secrets
+            gitleaks_cmd = _docker_run(GITLEAKS_IMAGE, [(repo_path, '/src'), (reports_dir, '/out')], ['detect', '--no-git', '--report-format', 'json', '--report-path', f"/out/{gitleaks_out.name}"])
+            _run(gitleaks_cmd, timeout=timeout)
 
     # Ensure report files exist even if scanners didn't produce them
     try:
@@ -112,7 +126,7 @@ def security_and_license_gate(snapshot_info: Dict, cfg: Dict) -> Dict:
     except Exception:
         ingest_hint = None
 
-    if not DOCKER_AVAILABLE:
+    if not DOCKER_AVAILABLE or not sec_cfg.get('enabled', True):
         # Scanners unavailable: rely on ingest hint only
         detected_effective = ingest_hint
         status = 'ok' if detected_effective in allowed else 'blocked_license_scanner_unavailable'

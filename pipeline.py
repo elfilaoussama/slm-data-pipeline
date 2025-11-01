@@ -21,6 +21,8 @@ from scripts.parse_extract import parse_and_extract
 from scripts.normalize_dedup import normalize_and_dedup
 from scripts.task_transformers import build_task_datasets
 from scripts.validate_and_version import validate_and_version
+# Ensure quality utilities are importable at flow runtime (used by downstream modules)
+from scripts import quality as quality_utils  # noqa: F401
 
 CONFIG_PATH = Path(__file__).parent / "configs.yml"
 
@@ -86,6 +88,13 @@ def main(
     config_path: str | None = None,
     manifest_path: str | None = None,
     skip_security: bool = False,
+    # Quality controls
+    quality_enabled: bool = True,
+    quality_min_loc: int | None = None,
+    quality_max_loc: int | None = None,
+    quality_max_cyclomatic: float | None = None,
+    quality_max_nesting: int | None = None,
+    quality_allow_synthetic_docs: bool | None = None,
 ):
     """
     Orchestrates the pilot pipeline: discovery -> ingest -> security -> extract -> dedup -> tasks.
@@ -113,6 +122,19 @@ def main(
         "worker_parallelism": worker_parallelism,
         "synthetic_bug_budget": synthetic_bug_budget,
     }
+    # Quality filter overrides
+    qf = cfg.get("quality_filters", {}) | {"enabled": quality_enabled}
+    if quality_min_loc is not None:
+        qf["min_loc"] = int(quality_min_loc)
+    if quality_max_loc is not None:
+        qf["max_loc"] = int(quality_max_loc)
+    if quality_max_cyclomatic is not None:
+        qf["max_cyclomatic"] = float(quality_max_cyclomatic)
+    if quality_max_nesting is not None:
+        qf["max_nesting"] = int(quality_max_nesting)
+    if quality_allow_synthetic_docs is not None:
+        qf["allow_synthetic_docs"] = bool(quality_allow_synthetic_docs)
+    cfg["quality_filters"] = qf
 
     # Discovery: optionally use an existing manifest if provided
     if manifest_path:
@@ -222,6 +244,16 @@ if __name__ == "__main__":
     parser.add_argument("--config-path", type=str, default=None, help="Path to configs.yml override")
     parser.add_argument("--manifest-path", type=str, default=None, help="Path to an existing discovery manifest JSON to skip discovery")
     parser.add_argument("--skip-security", action="store_true", help="Skip the security/license gate stage (bypass scanners)")
+    # Quality controls
+    q = parser.add_argument_group("quality filters", "Control function-level quality gating")
+    q.add_argument("--no-quality", dest="quality_enabled", action="store_false", help="Disable quality filtering (keep all extracted functions before dedup)")
+    q.add_argument("--quality-min-loc", type=int, default=None, help="Minimum lines of code for a function to be kept (overrides configs.yml)")
+    q.add_argument("--quality-max-loc", type=int, default=None, help="Maximum lines of code for a function to be kept (overrides configs.yml)")
+    q.add_argument("--quality-max-cyclomatic", type=float, default=None, help="Maximum cyclomatic complexity allowed (overrides configs.yml)")
+    q.add_argument("--quality-max-nesting", type=int, default=None, help="Maximum nesting depth allowed (overrides configs.yml)")
+    q.add_argument("--quality-allow-synthetic-docs", dest="quality_allow_synthetic_docs", action="store_true", help="Allow records with synthetic docstrings fabricated during extraction")
+    q.add_argument("--quality-disallow-synthetic-docs", dest="quality_allow_synthetic_docs", action="store_false", help="Drop records with synthetic docstrings fabricated during extraction")
+    parser.set_defaults(quality_enabled=True, quality_allow_synthetic_docs=None)
 
     args = parser.parse_args()
 
@@ -243,6 +275,12 @@ if __name__ == "__main__":
         test_timeout=args.test_timeout,
         worker_parallelism=args.worker_parallelism,
         config_path=args.config_path,
-    manifest_path=args.manifest_path,
-    skip_security=args.skip_security,
+        manifest_path=args.manifest_path,
+        skip_security=args.skip_security,
+        quality_enabled=args.quality_enabled,
+        quality_min_loc=args.quality_min_loc,
+        quality_max_loc=args.quality_max_loc,
+        quality_max_cyclomatic=args.quality_max_cyclomatic,
+        quality_max_nesting=args.quality_max_nesting,
+        quality_allow_synthetic_docs=args.quality_allow_synthetic_docs,
     )

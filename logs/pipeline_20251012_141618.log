@@ -1,9 +1,0 @@
-14:17:12.150 | INFO    | prefect.engine - Created flow run 'able-raptor' for flow 'slm-pipeline'
-14:17:12.236 | INFO    | Flow run 'able-raptor' - Starting repo discovery…
-14:17:12.323 | INFO    | Flow run 'able-raptor' - Created task run 't_discover_repos-0' for task 't_discover_repos'
-14:17:12.557 | INFO    | Flow run 'able-raptor' - Submitted task run 't_discover_repos-0' for execution.
-14:17:15.613 | INFO    | Task run 't_discover_repos-0' - Finished in state Completed()
-14:17:15.621 | INFO    | Flow run 'able-raptor' - Discovered 0 repos; ingesting…
-14:17:15.624 | INFO    | Flow run 'able-raptor' - 0 repos passed security/license gate; parsing…
-14:17:15.625 | WARNING | Flow run 'able-raptor' - No AST dirs produced; exiting early.
-14:17:15.661 | INFO    | Flow run 'able-raptor' - Finished in state Completed('All states completed.')

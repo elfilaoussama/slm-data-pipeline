@@ -1,5 +1,7 @@
 # Security & licensing
 
+[Back to Pipeline stages](pipeline-stages.md) · [Quickstart](../QUICKSTART.md) · [Configuration](configuration.md)
+
 This pipeline prioritizes legal compliance and basic security hygiene.
 
 - License gating:
@@ -17,3 +19,8 @@ Artifacts:
 Operational notes:
 - Docker must be available within the runtime (WSL2 is recommended on Windows).
 - Network failures or missing images generate stub outputs; the gate still enforces the allowlist.
+
+CLI controls:
+- Skip the entire gate for local dry runs: `--skip-security`
+
+See how this feeds validation in [Schemas](data-schemas.md) and the final [Pipeline stages](pipeline-stages.md).

@@ -29,7 +29,7 @@ python pipeline.py --max-repos 1 --min-stars 0 --languages python --keyword-quer
 
 WSL helper with logging:
 ```
-/mnt/e/PROJECTS/arkx/code_data_pipline/run_wsl_with_logs.sh
+scripts/run_wsl_with_logs.sh
 ```
 
 ## Outputs
@@ -38,5 +38,19 @@ WSL helper with logging:
 - Manifest: `data/final/manifest.json`
 
 ## Next
-- See `docs/pipeline-stages.md` for what each step does.
-- See `docs/configuration.md` to tune discovery, filters, and dedup.
+- See [Pipeline stages](docs/pipeline-stages.md) for what each step does.
+- See [Configuration](docs/configuration.md) to tune discovery, filters, and dedup.
+- See [Security & licensing](docs/security-and-licensing.md) for gating and reports.
+
+### Quality filters from CLI
+No need to edit `configs.yml`—override per run:
+```
+# Disable all quality gates
+python pipeline.py --no-quality
+
+# Override thresholds
+python pipeline.py --quality-min-loc 8 --quality-max-cyclomatic 10 --quality-max-nesting 4
+
+# Drop synthetic docstrings
+python pipeline.py --quality-disallow-synthetic-docs
+```
