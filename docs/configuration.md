@@ -7,6 +7,8 @@ Edit `configs.yml` to control discovery, extraction, deduplication, security, an
 Key sections and related CLI overrides:
 - semantic, keywords → discovery
   - CLI: `--semantic-query`, `--semantic-topk`, `--semantic-threshold`, `--keyword-query`
+  - Multi-query: separate keyword queries with ` | ` (pipe). Example: `"graph algorithms" | dijkstra | bfs`
+  - Multiple keyword queries: separate with ` | ` to run in parallel threads, e.g. `--keyword-query '"fastapi" | "flask"'`
 - extract → function size bounds
   - CLI: `--min-function-loc`, `--max-function-loc`
 - quality_filters → function quality gating

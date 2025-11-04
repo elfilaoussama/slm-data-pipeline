@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 import hashlib
@@ -204,6 +205,52 @@ def _gl_search(keyword_query: str, min_stars: int, language_filters: List[str], 
     return out
 
 
+def _chunk_or_query(q: str, max_len: int = 200) -> List[str]:
+    """If a subquery contains many `OR` terms or is too long, split into chunks under max_len.
+    Example: 'a OR b OR c OR d' -> ['a OR b', 'c OR d'] (approximate length-based packing).
+    """
+    if not q:
+        return []
+    if len(q) <= max_len:
+        return [q]
+    # Naive split on OR (outside of quotes not handled perfectly, but good-enough for search terms)
+    toks = [t.strip() for t in re.split(r"\s+OR\s+", q) if t.strip()]
+    if len(toks) <= 1:
+        # no ORs, but long – return as-is to avoid altering semantics
+        return [q]
+    chunks: List[str] = []
+    cur: List[str] = []
+    cur_len = 0
+    for t in toks:
+        part = t if not cur else f" OR {t}"
+        if cur_len + len(part) > max_len and cur:
+            chunks.append(''.join(cur))
+            cur = [t]
+            cur_len = len(t)
+        else:
+            cur.append(part if cur else t)
+            cur_len += len(part)
+    if cur:
+        chunks.append(''.join(cur))
+    return chunks
+
+
+def _parse_multi_queries(keyword_query: str) -> List[str]:
+    """Split a keyword query on '|' (pipe) separators, trimming spaces and optional quotes.
+    Example: '"query 1" | query2 | "query 3 with spaces"' -> ["query 1", "query2", "query 3 with spaces"]
+    """
+    if not keyword_query:
+        return []
+    parts = [p.strip() for p in re.split(r"\s*\|\s*", keyword_query) if p.strip()]
+    cleaned: List[str] = []
+    for p in parts:
+        if (p.startswith('"') and p.endswith('"')) or (p.startswith("'") and p.endswith("'")):
+            p = p[1:-1].strip()
+        if p:
+            cleaned.append(p)
+    return cleaned
+
+
 def _fetch_readme_preview(item: Dict) -> str:
     """Try several common README names, cache locally to avoid repeated fetches."""
     cache_p = CACHE_DIR / f"readme_{item['source'].lower()}_{item['repo_full_name'].replace('/', '_')}.txt"
@@ -245,12 +292,63 @@ def discover_repos(params: Dict, cfg: Dict) -> Path:
 
     keyword_query = params.get('keyword_query') or cfg.get('keywords', {}).get('query', '')
     items: List[Dict] = []
-    # Pull from both sources and deduplicate by (source, repo_full_name)
+    # Pull from both sources and deduplicate by (source, repo_full_name). Support multi-query fanout using threads.
     max_per_source = int(semantic_cfg.get('topk', 200))
-    gh_items = _gh_search(keyword_query, min_stars, languages, max_items=max_per_source)
-    gl_items = _gl_search(keyword_query, min_stars, languages, max_items=max_per_source)
+
+    subqueries = _parse_multi_queries(keyword_query)
+    if not subqueries:
+        subqueries = [keyword_query]
+
+    # Light debug: show how many subqueries we will fan out
+    try:
+        print(f"[discovery] running {len(subqueries)} subqueries (pipe-separated)")
+    except Exception:
+        pass
+
+    def _run_one(q: str) -> Dict:
+        # If query is very long, break OR-chains into smaller chunks and aggregate
+        chunks = _chunk_or_query(q, max_len=200)
+        agg: List[Dict] = []
+        ghc = 0
+        glc = 0
+        for cq in chunks:
+            gh = _gh_search(cq, min_stars, languages, max_items=max_per_source)
+            gl = _gl_search(cq, min_stars, languages, max_items=max_per_source)
+            ghc += len(gh)
+            glc += len(gl)
+            agg.extend(gh)
+            agg.extend(gl)
+        return {"q": q, "chunks": len(chunks), "gh": ghc, "gl": glc, "items": agg}
+
+    if len(subqueries) == 1:
+        r = _run_one(subqueries[0])
+        try:
+            qlog = r["q"] if isinstance(r, dict) else subqueries[0]
+            print(f"[discovery] subquery: {qlog!r} (chunks={r.get('chunks', 1)}) -> gh={r.get('gh', 0)} gl={r.get('gl', 0)} total={len(r.get('items', []))}")
+        except Exception:
+            pass
+        results = r.get('items', []) if isinstance(r, dict) else (r or [])
+    else:
+        results: List[Dict] = []
+        # Limit threads to avoid abuse; GitHub/GitLab have rate limits
+        max_workers = min(len(subqueries), 6)
+        with ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futs = {ex.submit(_run_one, q): q for q in subqueries}
+            for fut in as_completed(futs):
+                try:
+                    r = fut.result()
+                    if isinstance(r, dict):
+                        try:
+                            print(f"[discovery] subquery: {r['q']!r} (chunks={r.get('chunks', 1)}) -> gh={r['gh']} gl={r['gl']} total={len(r['items'])}")
+                        except Exception:
+                            pass
+                        results.extend(r.get('items', []))
+                    else:
+                        results.extend(r)
+                except Exception:
+                    continue
     seen_pairs = set()
-    for it in gh_items + gl_items:
+    for it in results:
         key = (it['source'], it['repo_full_name'])
         if key in seen_pairs:
             continue

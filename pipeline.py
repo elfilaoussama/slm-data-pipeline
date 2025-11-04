@@ -233,7 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--semantic-query", type=str, default="graph algorithms", help="Semantic discovery query text")
     parser.add_argument("--semantic-topk", type=int, default=200, help="Top-K repos to retrieve before thresholding")
     parser.add_argument("--semantic-threshold", type=float, default=0.70, help="Cosine similarity threshold for semantic filtering")
-    parser.add_argument("--keyword-query", type=str, default="graph algorithm python", help="Keyword discovery fallback query")
+    parser.add_argument("--keyword-query", type=str, default="graph algorithm python", help="Keyword discovery query; use ' | ' to run multiple queries in parallel (e.g., 'fastapi | flask')")
     parser.add_argument("--min-function-loc", type=int, default=5, help="Minimum function LOC to extract")
     parser.add_argument("--max-function-loc", type=int, default=400, help="Maximum function LOC to extract")
     parser.add_argument("--dedup-shingle-size", type=int, default=7, help="Shingle size for near-dup detection")

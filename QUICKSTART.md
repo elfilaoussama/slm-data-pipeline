@@ -27,6 +27,11 @@ Minimal run:
 python pipeline.py --max-repos 1 --min-stars 0 --languages python --keyword-query "license:mit python"
 ```
 
+Run multiple keyword queries in parallel (split by ` | `):
+```
+python pipeline.py --max-repos 5 --min-stars 0 --languages python --keyword-query '"fastapi" | "flask"'
+```
+
 WSL helper with logging:
 ```
 scripts/run_wsl_with_logs.sh
